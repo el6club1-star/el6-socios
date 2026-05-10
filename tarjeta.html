@@ -1,81 +1,40 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MI TARJETA VIP - EL 6</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { background: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .card { width: 90%; max-width: 350px; background: #000; border: 2px solid #d4af37; border-radius: 25px; padding: 30px; text-align: center; box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
-        h1 { letter-spacing: 5px; color: #d4af37; font-size: 20px; margin-bottom: 20px; }
-        #qr-space { background: white; padding: 15px; border-radius: 15px; display: inline-block; margin: 20px 0; }
-        .saldo-box { background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37; border-radius: 15px; padding: 15px; margin: 15px 0; }
-        .saldo-label { font-size: 12px; text-transform: uppercase; color: #aaa; }
-        .saldo-puntos { font-size: 32px; font-weight: bold; color: #fff; display: block; margin-top: 5px; }
-        .socio-info { text-align: left; border-top: 1px solid #333; padding-top: 15px; font-size: 13px; }
-        .socio-info p { margin: 5px 0; }
-        .socio-val { float: right; color: #d4af37; font-weight: bold; }
-    </style>
-</head>
-<body>
+<script>
+    const _supabase = supabase.createClient('https://rmskjegarvntuqpfzfbm.supabase.co', 'sb_publishable_hEqxPZNGDxpNZEnz7hrymg_cL8GvwHK');
+    const urlParams = new URLSearchParams(window.location.search);
+    const dniSocio = urlParams.get('dni');
 
-    <div class="card" id="tarjetaContenido">
-        <h1>CLUB PRIVADO EL 6</h1>
-        
-        <div id="qr-space"></div>
+    async function cargar() {
+        if(!dniSocio) return;
+        const { data } = await _supabase.from('socios').select('*').eq('dni', dniSocio).single();
+        if(data) {
+            const card = document.querySelector('.card');
+            const cat = data.cat;
 
-        <div class="saldo-box">
-            <span class="saldo-label">Créditos Disponibles</span>
-            <span id="puntos" class="saldo-puntos">...</span>
-        </div>
-
-        <div class="socio-info">
-            <p>SOCIO: <span id="nom" class="socio-val">Cargando...</span></p>
-            <p>DNI: <span id="dni" class="socio-val">...</span></p>
-            <p>CATEGORÍA: <span id="cat" class="socio-val">...</span></p>
-        </div>
-        <p style="font-size: 10px; color: #666; margin-top: 20px;">Presenta este código en barra</p>
-    </div>
-
-    <script>
-        const supabaseUrl = 'https://rmskjegarvntuqpfzfbm.supabase.co';
-        const supabaseKey = 'sb_publishable_hEqxPZNGDxpNZEnz7hrymg_cL8GvwHK';
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        // Obtener el DNI de la URL (ej: tarjeta.html?dni=12345678X)
-        const urlParams = new URLSearchParams(window.location.search);
-        const dniSocio = urlParams.get('dni');
-
-        async function cargarDatos() {
-            if(!dniSocio) return;
-            
-            const { data, error } = await _supabase
-                .from('socios')
-                .select('*')
-                .eq('dni', dniSocio)
-                .single();
-
-            if(data) {
-                document.getElementById('nom').innerText = data.nombre;
-                document.getElementById('dni').innerText = data.dni;
-                document.getElementById('cat').innerText = data.cat;
-                document.getElementById('puntos').innerText = data.consumiciones || 0;
-                
-                // Generar QR
-                document.getElementById('qr-space').innerHTML = "";
-                new QRious({
-                    element: document.getElementById('qr-space').appendChild(document.createElement('canvas')),
-                    value: data.dni,
-                    size: 200
-                });
+            // --- DISEÑOS SEGÚN CATEGORÍA ---
+            if(cat === "VIP Gold") {
+                card.style.background = "linear-gradient(135deg, #d4af37 0%, #f9f295 50%, #d4af37 100%)";
+                card.style.color = "black";
+            } else if(cat === "VIP Plata") {
+                card.style.background = "linear-gradient(135deg, #a0a0a0 0%, #e0e0e0 50%, #a0a0a0 100%)";
+                card.style.color = "black";
+            } else if(cat === "Elite") {
+                card.style.background = "linear-gradient(135deg, #0f172a 0%, #1e40af 100%)";
+                card.style.color = "white";
+            } else if(cat === "Socio Plus") {
+                card.style.background = "linear-gradient(135deg, #064e3b 0%, #10b981 100%)";
+                card.style.color = "white";
+            } else {
+                card.style.background = "#000"; // Estándar
+                card.style.color = "white";
             }
-        }
 
-        // Refrescar cada 5 segundos por si le restas créditos en el momento
-        setInterval(cargarDatos, 5000);
-        cargarDatos();
-    </script>
-</body>
-</html>
+            document.getElementById('nom').innerText = data.nombre;
+            document.getElementById('dni').innerText = data.dni;
+            document.getElementById('puntos').innerText = data.consumiciones || 0;
+            document.getElementById('qr-space').innerHTML = "";
+            new QRious({ element: document.getElementById('qr-space').appendChild(document.createElement('canvas')), value: data.dni, size: 180 });
+        }
+    }
+    cargar();
+    setInterval(cargar, 5000);
+</script>
