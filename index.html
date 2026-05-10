@@ -1,40 +1,154 @@
-<script>
-    const _supabase = supabase.createClient('https://rmskjegarvntuqpfzfbm.supabase.co', 'sb_publishable_hEqxPZNGDxpNZEnz7hrymg_cL8GvwHK');
-    const urlParams = new URLSearchParams(window.location.search);
-    const dniSocio = urlParams.get('dni');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA ELITE - TARJETA VIP</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --gold: #d4af37; }
+        body { 
+            background: #000; 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .card-vip { 
+            width: 320px; 
+            background: #000; 
+            border: 2px solid var(--gold); 
+            border-radius: 20px; 
+            padding: 25px; 
+            text-align: center; 
+            color: white; 
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.2);
+        }
+        #selloPagado { 
+            display: none; 
+            position: absolute; 
+            top: 15px; 
+            right: -30px; 
+            background: #22c55e; 
+            color: white; 
+            padding: 5px 40px; 
+            transform: rotate(45deg); 
+            font-size: 10px; 
+            font-weight: bold; 
+        }
+        #qr-space { 
+            background: white; 
+            padding: 10px; 
+            margin: 15px 0; 
+            display: inline-block; 
+            border-radius: 10px; 
+            min-height: 140px; 
+        }
+        .box-consumiciones { 
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            border-radius: 10px; 
+            padding: 15px; 
+            margin: 10px 0; 
+        }
+        .info-footer { 
+            text-align: left; 
+            font-size: 11px; 
+            border-top: 1px solid rgba(255,255,255,0.2); 
+            padding-top: 10px; 
+            margin-top: 10px;
+        }
+        .info-footer p { margin: 5px 0; }
+        .val { float: right; color: var(--gold); font-weight: bold; }
+    </style>
+</head>
+<body>
 
-    async function cargar() {
-        if(!dniSocio) return;
-        const { data } = await _supabase.from('socios').select('*').eq('dni', dniSocio).single();
-        if(data) {
-            const card = document.querySelector('.card');
-            const cat = data.cat;
+    <div id="mensajeError" style="display:none; text-align:center;">
+        <h2 style="color:var(--gold);">EL 6 - CLUB PRIVADO</h2>
+        <p>Por favor, accede desde el enlace de tu email.</p>
+    </div>
 
-            // --- DISEÑOS SEGÚN CATEGORÍA ---
-            if(cat === "VIP Gold") {
-                card.style.background = "linear-gradient(135deg, #d4af37 0%, #f9f295 50%, #d4af37 100%)";
-                card.style.color = "black";
-            } else if(cat === "VIP Plata") {
-                card.style.background = "linear-gradient(135deg, #a0a0a0 0%, #e0e0e0 50%, #a0a0a0 100%)";
-                card.style.color = "black";
-            } else if(cat === "Elite") {
-                card.style.background = "linear-gradient(135deg, #0f172a 0%, #1e40af 100%)";
-                card.style.color = "white";
-            } else if(cat === "Socio Plus") {
-                card.style.background = "linear-gradient(135deg, #064e3b 0%, #10b981 100%)";
-                card.style.color = "white";
-            } else {
-                card.style.background = "#000"; // Estándar
-                card.style.color = "white";
+    <div class="card-vip" id="cardMain" style="display:none;">
+        <div id="selloPagado">PAGADO ✅</div>
+        <h2 style="font-size:16px; margin:0; letter-spacing: 3px;">CLUB PRIVADO EL 6</h2>
+        <div id="card-id" style="font-size:32px; font-weight:900; margin:5px 0;"></div>
+        
+        <div id="qr-space"></div>
+        
+        <div class="box-consumiciones">
+            <div style="font-size:11px; text-transform: uppercase; color: #aaa;">Créditos Disponibles</div>
+            <div id="card-consumos" style="font-weight:bold; font-size:28px; color: #fff;">0</div>
+        </div>
+
+        <div class="info-footer">
+            <p>SOCIO: <span id="card-nom" class="val">---</span></p>
+            <p>DNI: <span id="card-dni" class="val">---</span></p>
+            <p>CATEGORÍA: <span id="card-cat" class="val">---</span></p>
+        </div>
+    </div>
+
+    <script>
+        const _supabase = supabase.createClient('https://rmskjegarvntuqpfzfbm.supabase.co', 'sb_publishable_hEqxPZNGDxpNZEnz7hrymg_cL8GvwHK');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const dniSocio = urlParams.get('dni');
+
+        async function cargarTarjeta() {
+            if(!dniSocio) {
+                document.getElementById('mensajeError').style.display = 'block';
+                return;
             }
 
-            document.getElementById('nom').innerText = data.nombre;
-            document.getElementById('dni').innerText = data.dni;
-            document.getElementById('puntos').innerText = data.consumiciones || 0;
-            document.getElementById('qr-space').innerHTML = "";
-            new QRious({ element: document.getElementById('qr-space').appendChild(document.createElement('canvas')), value: data.dni, size: 180 });
+            const { data, error } = await _supabase
+                .from('socios')
+                .select('*')
+                .eq('dni', dniSocio)
+                .single();
+
+            if(data) {
+                document.getElementById('cardMain').style.display = 'block';
+                document.getElementById('mensajeError').style.display = 'none';
+
+                // Datos básicos
+                document.getElementById('card-id').innerText = "Nº " + (data.id || "1");
+                document.getElementById('card-nom').innerText = data.nombre;
+                document.getElementById('card-dni').innerText = data.dni;
+                document.getElementById('card-cat').innerText = data.cat;
+                document.getElementById('card-consumos').innerText = data.consumiciones || 0;
+                document.getElementById('selloPagado').style.display = data.pagado ? 'block' : 'none';
+
+                // Lógica de colores idéntica a tu 5.8
+                const card = document.getElementById('cardMain');
+                const cat = data.cat;
+                if(cat === "VIP Gold") card.style.background = "linear-gradient(135deg, #d4af37 0%, #f9f295 50%, #d4af37 100%)";
+                else if(cat === "VIP Plata") card.style.background = "linear-gradient(135deg, #a0a0a0 0%, #e0e0e0 50%, #a0a0a0 100%)";
+                else if(cat === "Elite") card.style.background = "linear-gradient(135deg, #0f172a 0%, #1e40af 100%)";
+                else if(cat === "Socio Plus") card.style.background = "linear-gradient(135deg, #064e3b 0%, #10b981 100%)";
+                else card.style.background = "#000";
+
+                // Color de texto para legibilidad
+                if(cat === "VIP Gold" || cat === "VIP Plata") card.style.color = "black";
+                else card.style.color = "white";
+
+                // QR
+                document.getElementById('qr-space').innerHTML = "";
+                new QRious({
+                    element: document.getElementById('qr-space').appendChild(document.createElement('canvas')),
+                    value: data.dni,
+                    size: 180
+                });
+            }
         }
-    }
-    cargar();
-    setInterval(cargar, 5000);
-</script>
+
+        setInterval(cargarTarjeta, 5000);
+        cargarTarjeta();
+    </script>
+</body>
+</html>
