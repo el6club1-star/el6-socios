@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socio - Club Privado El 6</title>
+    <!-- Cargamos la librería de Supabase para leer en tiempo real -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --success: #15803d;
+        }
+        body {
+            background-color: #0b0b0b;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        /* DISEÑO CLONADO DE LA TARJETA DEL CLUB */
+        .card-vip {
+            background: linear-gradient(135deg, #111111 0%, #1c1c1c 100%);
+            border: 2px solid var(--gold);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(212, 175, 55, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 25px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Sello flotante de PAGADO */
+        #selloPagado {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--success);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(21, 128, 61, 0.3);
+            display: none;
+            z-index: 10;
+        }
+
+        #qr-space {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 15px auto;
+        }
+
+        #qr-space img {
+            display: block;
+            max-width: 150px;
+            height: auto;
+        }
+
+        #card-consumos {
+            margin: 15px 0;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #previewFirmaSocio {
+            max-height: 40px;
+            display: block;
+            margin-top: 5px;
+            filter: invert(1) brightness(2); /* Pone la firma blanca sobre el fondo negro */
+            opacity: 0.8;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+
+        #pantallaCarga {
+            text-align: center;
+            color: var(--gold);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mensaje de carga inicial -->
+    <div id="pantallaCarga">Leyendo credenciales de socio de El 6...</div>
+
+    <!-- ESTRUCTURA DE TU TARJETA VIP -->
+    <div class="card-vip" id="cardMain" style="display: none;">
+        <div id="selloPagado">PAGADO ✅</div>
+        <h2 style="font-size:16px; margin:0; color: var(--gold); letter-spacing: 1px;">CLUB PRIVADO EL 6</h2>
+        
+        <div id="card-id" style="font-size:32px; font-weight:900; margin:5px 0; color: white;"></div>
+        <div id="card-categoria-texto" style="font-size:12px; font-weight:bold; letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; opacity:0.9;"></div>
+        
+        <!-- Espacio donde se dibuja el QR -->
+        <div id="qr-space"></div>
+        
+        <div id="card-consumos">Cargando consumos actuales...</div>
+        
+        <div style="text-align:left; font-size:11px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px; margin-top: 15px;">
+            <div class="info-row"><span>SOCIO:</span><span id="card-nom" style="font-weight: bold;">---</span></div>
+            <div class="info-row"><span>DNI:</span><span id="card-dni" style="font-weight: bold;">---</span></div>
+            <div class="info-row"><span>CATEGORÍA:</span><span id="card-cat-abajo" style="font-weight: bold;">---</span></div>
+            
+            <div style="margin-top: 10px;">
+                <span style="font-size: 10px; opacity: 0.6; display: block;">FIRMA CONTRATO DIGITAL:</span>
+                <img id="previewFirmaSocio" src="" alt="Firma">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Conexión exacta a tu base de datos Supabase
+        const supabaseUrl = 'https://rmskjegarvntuqpfzfbm.supabase.co';
+        const supabaseKey = 'sb_publishable_hEqxPZNGDxpNZEnz7hrymg_cL8GvwHK';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        const NOMBRE_TABLA = 'socios';
+
+        // Capturamos el ID del socio desde la URL (?id=NumeroDeSocio)
+        const parametros = new URLSearchParams(window.location.search);
+        const idSocioUrl = parametros.get('id');
+
+        async function cargarTarjetaDigital() {
+            if (!idSocioUrl) {
+                document.getElementById('pantallaCarga').innerText = "❌ Enlace de tarjeta no válido.";
+                return;
+            }
+
+            try {
+                // Buscamos los datos actualizados de este socio en Supabase
+                const { data: socio, error } = await _supabase
+                    .from(NOMBRE_TABLA)
+                    .select('*')
+                    .eq('id', idSocioUrl)
+                    .single();
+
+                if (error || !socio) {
+                    document.getElementById('pantallaCarga').innerText = "❌ No se encontró la tarjeta del socio.";
+                    return;
+                }
+
+                // Activamos la tarjeta visual y quitamos el texto de carga
+                document.getElementById('pantallaCarga').style.display = 'none';
+                document.getElementById('cardMain').style.display = 'block';
+
+                // Inyectamos los datos reales del socio
+                document.getElementById('card-id').innerText = String(socio.id || '').padStart(4, '0');
+                document.getElementById('card-categoria-texto').innerText = socio.cat || 'ESTÁNDAR';
+                document.getElementById('card-nom').innerText = socio.nombre || '---';
+                document.getElementById('card-dni').innerText = socio.dni || '---';
+                document.getElementById('card-cat-abajo').innerText = (socio.cat || 'ESTÁNDAR').toUpperCase();
+
+                // Cargar la firma guardada en su registro
+                if (socio.firma) {
+                    document.getElementById('previewFirmaSocio').src = socio.firma;
+                    document.getElementById('previewFirmaSocio').style.display = 'block';
+                } else {
+                    document.getElementById('previewFirmaSocio').style.display = 'none';
+                }
+
+                // Generar código QR dinámico apuntando a esta misma página del móvil
+                const urlTarjeta = window.location.href;
+                document.getElementById('qr-space').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlTarjeta)}" alt="QR de acceso">`;
+
+                // Control visual del sello de PAGADO (Límite de 5 horas desde que se pulsó pagar)
+                let pagadoValido = socio.pago_realizado;
+                if (socio.hora_pago) {
+                    const hPago = new Date(socio.hora_pago);
+                    const hAgora = new Date();
+                    const diff = (hAgora - hPago) / (1000 * 60 * 60);
+                    if (diff > 5) pagadoValido = false; 
+                }
+
+                if (pagadoValido) {
+                    document.getElementById('selloPagado').style.display = 'block';
+                } else {
+                    document.getElementById('selloPagado').style.display = 'none';
+                }
+
+                // Desglose de consumos actuales en tiempo real en la pantalla del cliente
+                let textoConsumos = "Sin consumiciones pendientes";
+                if (socio.copas || socio.cervezas || socio.chupitos) {
+                    let deSglos = [];
+                    if(socio.copas) deSglos.push(`🥃 ${socio.copas} Copas`);
+                    if(socio.cervezas) deSglos.push(`🍺 ${socio.cervezas} Cervezas`);
+                    if(socio.chupitos) deSglos.push(`🧪 ${socio.chupitos} Chupitos`);
+                    textoConsumos = deSglos.join(' | ');
+                }
+                document.getElementById('card-consumos').innerText = textoConsumos;
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('pantallaCarga').innerText = "❌ Error al conectar con la base de datos.";
+            }
+        }
+
+        // Ejecutar lectura inicial al abrir la página
+        cargarTarjetaDigital();
+
+        // Escucha activa en segundo plano (vuelve a consultar Supabase cada 4 segundos por si le sumas copas)
+        setInterval(cargarTarjetaDigital, 4000);
+    </script>
+</body>
+</html>
