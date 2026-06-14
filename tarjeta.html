@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socio - Club Privado El 6</title>
+    <!-- Cargamos la librería de Supabase para leer en tiempo real -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -71,19 +72,19 @@
             box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); 
         }
 
-        /* Sello PAGADO estilo esquina del ordenador */
+        /* Botón PAGADO bien colocado, plano y limpio (Arriba a la derecha) */
         #selloPagado {
             position: absolute;
-            top: 12px;
-            right: -32px;
+            top: 15px;
+            right: 15px;
             background: #22c55e;
             color: white;
-            padding: 4px 35px;
-            font-size: 9px;
+            padding: 5px 10px;
+            font-size: 10px;
             font-weight: bold;
-            letter-spacing: 1px;
-            transform: rotate(45deg);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            letter-spacing: 0.5px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
             display: none;
             z-index: 10;
         }
@@ -125,22 +126,29 @@
 </head>
 <body>
 
+    <!-- Mensaje de carga inicial -->
     <div id="pantallaCarga">Leyendo credenciales de socio de El 6...</div>
 
+    <!-- ESTRUCTURA DE LA TARJETA VIP -->
     <div class="card-vip" id="cardMain" style="display: none;">
         <div id="selloPagado">PAGADO ✓</div>
         
-        <h2 style="font-size:13px; margin:0 0 8px 0; color: #ffffff !important; letter-spacing: 1px; font-weight: bold; opacity: 0.9;">CLUB PRIVADO EL 6</h2>
+        <!-- CORRECCIÓN: Escritura principal de la tarjeta en NEGRO para máxima claridad -->
+        <h2 style="font-size:13px; margin:0 0 8px 0; color: #000000 !important; letter-spacing: 1px; font-weight: bold; opacity: 0.9;">CLUB PRIVADO EL 6</h2>
         
-        <div style="font-size:26px; font-weight: bold; color: #ffffff !important; margin-bottom: 5px;">
+        <!-- CORRECCIÓN: Número "Nº 5" en grande y en color NEGRO -->
+        <div style="font-size:26px; font-weight: bold; color: #000000 !important; margin-bottom: 5px;">
             Nº <span id="card-id"></span>
         </div>
         
-        <div id="card-categoria-texto" style="font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; opacity:0.8; color: #ffffff !important;"></div>
+        <!-- Categoria secundaria en negro -->
+        <div id="card-categoria-texto" style="font-size:11px; font-weight: 900; letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; opacity:0.8; color: #000000 !important;"></div>
         
+        <!-- Espacio donde se dibuja el QR -->
         <div id="qr-space"></div>
         
-        <div style="text-align:left; font-size:11px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px; margin-top: 20px;">
+        <!-- Datos de abajo (mantienen su diseño limpio sobre el fondo oscuro) -->
+        <div style="text-align:left; font-size:11px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px; margin-top: 20px; color: #ffffff;">
             <div class="info-row"><span>SOCIO:</span><span id="card-nom" style="font-weight: bold;">---</span></div>
             <div class="info-row"><span>DNI:</span><span id="card-dni" style="font-weight: bold;">---</span></div>
             <div class="info-row"><span>CATEGORÍA:</span><span id="card-cat-abajo" style="font-weight: bold;">---</span></div>
@@ -182,7 +190,7 @@
                 document.getElementById('pantallaCarga').style.display = 'none';
                 document.getElementById('cardMain').style.display = 'block';
 
-                // ID limpio
+                // ID limpio sin ceros por delante
                 document.getElementById('card-id').innerText = socio.id || '';
                 
                 document.getElementById('card-categoria-texto').innerText = socio.cat || 'ESTÁNDAR';
@@ -190,7 +198,7 @@
                 document.getElementById('card-dni').innerText = socio.dni || '---';
                 document.getElementById('card-cat-abajo').innerText = (socio.cat || 'ESTÁNDAR').toUpperCase();
 
-                // Asignar fondo
+                // Asignar fondo dinámico
                 const tarjetaContenedor = document.getElementById('cardMain');
                 tarjetaContenedor.classList.remove('diseno-estandar', 'diseno-socio-plus', 'diseno-vip-plata', 'diseno-vip-gold', 'diseno-elite');
                 
